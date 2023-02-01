@@ -15,27 +15,27 @@ class LFWADataset(Dataset):
             paris = source_file.readlines()
 
         for line in enumerate(paris):
-            self.data[line[0]] = line[1][:-1].split('\t')
+            self.data[int(line[0]) - 1] = line[1][:-1].split('\t')
 
-        self.dataset_length = int(self.data[0][0]) * 2
-        del self.data[0]
+        self.dataset_length = int(self.data[-1][0]) * 2
+        del self.data[-1]
 
     def __len__(self):
         return self.dataset_length
 
     def __getitem__(self, item):
-        if item <= (self.dataset_length / 2 - 1):
+        if len(self.data[item]) == 3:
             label = 1
-            first_name = self.data[item + 1][0]
-            first_index = self.data[item + 1][1]
-            second_name = self.data[item + 1][0]
-            second_index = self.data[item + 1][2]
+            first_name = self.data[item][0]
+            first_index = self.data[item][1]
+            second_name = self.data[item][0]
+            second_index = self.data[item][2]
         else:
             label = 0
-            first_name = self.data[item + 1][0]
-            first_index = self.data[item + 1][1]
-            second_name = self.data[item + 1][2]
-            second_index = self.data[item + 1][3]
+            first_name = self.data[item][0]
+            first_index = self.data[item][1]
+            second_name = self.data[item][2]
+            second_index = self.data[item][3]
 
         transform = transforms.Compose([transforms.ToTensor()])
 
