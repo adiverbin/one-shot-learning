@@ -58,16 +58,34 @@ class SiameseNetwork(pl.LightningModule):
                       kernel_size=(4, 4)),
 
             nn.ReLU(),
+            nn.MaxPool2d(kernel_size=(2, 2), stride=2),
+
+            nn.Conv2d(in_channels=256,
+                      out_channels=256,
+                      kernel_size=(4, 4)),
+
+            nn.ReLU(),
+
+            nn.Conv2d(in_channels=256,
+                      out_channels=256,
+                      kernel_size=(4, 4)),
+
+            nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(in_features=147456, out_features=4096),
+            # 256X6X6 = 9216
+            nn.Linear(in_features=9216, out_features=4096),
             nn.Sigmoid()
         )
         self.twin_network.apply(SiameseNetwork.init_weights)
 
 
     def forward(self, input1: torch.Tensor, input2: torch.Tensor):
-        output1 = self.twin_network(input1)
-        output2 = self.twin_network(input2)
+        length = len(input1)
+        cat_input = torch.cat((input1, input2), dim=0)
+        cat_output = self.twin_network(cat_input)
+        output1 = cat_output[:length]
+        output2 = cat_output[length:]
+
         return output1, output2
 
     def training_step(self, batch, batch_idx):
@@ -79,6 +97,9 @@ class SiameseNetwork(pl.LightningModule):
         self.log("training Loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
+    def training_epoch_end(self, outputs):
+        print(f"UPDATING LEARNING RATE FROM {self.learning_rate} TO {self.learning_rate * 0.99}")
+        self.learning_rate = self.learning_rate * 0.99
     def validation_step(self, batch, batch_idx):
         input1, input2, y = batch
         output1, output2 = self.forward(input1, input2)
