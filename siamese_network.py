@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
+
+
 from lfwa_dataset import LFWADataset
 from torch.utils.data import DataLoader
 
@@ -28,11 +30,10 @@ class BinaryCrossEntropyLoss(torch.nn.Module):
 class SiameseNetwork(pl.LightningModule):
     def __init__(self):
         super().__init__()
-        self.batch_size = 128
         self.loss = BinaryCrossEntropyLoss()
-        self.learning_rate = 0.1
+        self.learning_rate = 0.0001
         self.twin_network = nn.Sequential(
-            nn.Conv2d(in_channels=3,
+            nn.Conv2d(in_channels=1,
                       out_channels=64,
                       kernel_size=(10, 10)),
 
@@ -77,6 +78,7 @@ class SiameseNetwork(pl.LightningModule):
             nn.Sigmoid()
         )
         self.twin_network.apply(SiameseNetwork.init_weights)
+        self.threshold = 0.5
 
 
     def forward(self, input1: torch.Tensor, input2: torch.Tensor):
@@ -89,12 +91,23 @@ class SiameseNetwork(pl.LightningModule):
         return output1, output2
 
     def training_step(self, batch, batch_idx):
-
         input1, input2, y = batch
         output1, output2 = self.forward(input1, input2)
         loss = self.loss.forward(output1, output2, y)
+        y_prob = torch.where(loss <= self.threshold, 0, loss)
+        y_prob = torch.where(y_prob > self.threshold, 1, y_prob)
+        correct = y_prob.eq(y).sum().item()
+        total = len(y)
+        logs={"train_loss": loss}
 
-        self.log("training Loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        # batch_dictionary = {
+        #     "loss": loss,
+        #     "log": logs,
+        #     "correct": correct,
+        #     "total": total
+        # }
+
+        self.log("train Loss", loss, on_step=True)
         return loss
 
     def training_epoch_end(self, outputs):
@@ -106,6 +119,7 @@ class SiameseNetwork(pl.LightningModule):
         loss = self.loss.forward(output1, output2, y)
 
         self.log("validation Loss", loss,)
+        return loss
     @staticmethod
     def init_weights(m):
         if isinstance(m, nn.Linear):
@@ -114,11 +128,15 @@ class SiameseNetwork(pl.LightningModule):
         elif isinstance(m, nn.Conv2d):
             torch.nn.init.normal_(m.weight, mean=0, std=10e-2)
             torch.nn.init.normal_(m.bias, mean=0.5, std=10e-2)
-
     def test_step(self, batch, batch_idx):
-        pass
+        input1, input2, y = batch
+        output1, output2 = self.forward(input1, input2)
+        loss = self.loss.forward(output1, output2, y)
+
+        self.log("test Loss", loss, )
 
     def configure_optimizers(self):
         #TODO: in order to add l2 regularization, add weight decay
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         return optimizer
+
