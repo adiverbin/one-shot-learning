@@ -1,6 +1,7 @@
 import os
 
 import cv2
+import torchvision
 from torch.utils.data import Dataset
 import torch
 import torchvision.transforms as transforms
@@ -37,16 +38,11 @@ class LFWADataset(Dataset):
             second_name = self.data[item][2]
             second_index = self.data[item][3]
 
-        transform = transforms.Compose([transforms.ToTensor()])
 
         first_path = f'{first_name}_{first_index.zfill(4)}.jpg'
         second_path = f'{second_name}_{second_index.zfill(4)}.jpg'
 
-        first_image = cv2.imread(os.path.join(self.dara_dir, first_name, first_path))
-
-        second_image = cv2.imread(os.path.join(self.dara_dir, second_name, second_path))
-
-        first_image = transform(first_image)
-        second_image = transform(second_image)
+        first_image = torchvision.io.read_image(os.path.join(self.dara_dir, first_name, first_path)).float()
+        second_image = torchvision.io.read_image(os.path.join(self.dara_dir, second_name, second_path)).float()
 
         return first_image, second_image, label
