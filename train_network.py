@@ -5,10 +5,10 @@ from siamese_network import SiameseNetwork
 
 def train():
     train_dataloader = DataLoader(LFWADataset(data_dir='lfwa/lfw2/lfw2', source_path='lfwa/lfw2/splits/train.txt'),
-                            batch_size=128, shuffle=True, num_workers=0)
-    trainer = pl.Trainer(max_epochs=200)
+                            batch_size=16, shuffle=True, num_workers=0)
+    trainer = pl.Trainer(max_epochs=200, log_every_n_steps=1, limit_train_batches=1)
     model = SiameseNetwork()
-    trainer.fit(model, train_dataloaders=train_dataloader)
+    trainer.fit(model, train_dataloaders=train_dataloader, )
 
 if __name__ == '__main__':
     train()
