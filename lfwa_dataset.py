@@ -1,10 +1,6 @@
 import os
-
-import cv2
 import torchvision
 from torch.utils.data import Dataset
-import torch
-import torchvision.transforms as transforms
 
 
 class LFWADataset(Dataset):
@@ -26,13 +22,13 @@ class LFWADataset(Dataset):
 
     def __getitem__(self, item):
         if len(self.data[item]) == 3:
-            label = 1
+            label = 0
             first_name = self.data[item][0]
             first_index = self.data[item][1]
             second_name = self.data[item][0]
             second_index = self.data[item][2]
         else:
-            label = 0
+            label = 1
             first_name = self.data[item][0]
             first_index = self.data[item][1]
             second_name = self.data[item][2]
@@ -44,5 +40,11 @@ class LFWADataset(Dataset):
 
         first_image = torchvision.io.read_image(os.path.join(self.dara_dir, first_name, first_path)).float()
         second_image = torchvision.io.read_image(os.path.join(self.dara_dir, second_name, second_path)).float()
+
+        # first_image = first_image[:, 40:210, 40:210]
+        # second_image = second_image[:, 40:210, 40:210]
+
+        first_image = (first_image - 101.0791) / 70.5257
+        second_image = (second_image - 101.0791) / 70.5257
 
         return first_image, second_image, label
